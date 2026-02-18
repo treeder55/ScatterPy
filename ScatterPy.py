@@ -128,9 +128,9 @@ def f_C(lat_pars,u,v,Ei,tth='',th='',thstep = 10.,coinc=False,hkl='h'):
     Ch = C['Q_rlu'].groupby('anginv')
     qq = ['Qx','Qy','Qz']; hkl = ['H','K','L'];
     for a, (q,h,(caname, ca)) in enumerate(zip(qq,hkl,Ca)):
-        C[q] = ca.round(3)
+        C[q] = ca.isel(Ei=0).isel(anginv=0).round(3)
     for a, (q,h,(chname, ch)) in enumerate(zip(qq,hkl,Ch)):
-        C[h] = ch.round(3)
+        C[h] = ch.isel(Ei=0).isel(anginv=0).round(3)
     Cdf = C.squeeze('Ei').drop_vars(['|ki|','vol','Ei']).drop_dims(['anginv','HKO']).to_dataframe()
     return C,Cdf
 def printeverythingdf(df):
