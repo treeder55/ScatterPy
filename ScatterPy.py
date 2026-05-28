@@ -76,26 +76,21 @@ def f_Q(Ei,tth,th,u,v,lat_pars): # u is in the sample holder plane, v is perpind
     Q = np.transpose(ki_recip-kf_recip)
     return Q # in inverse angstrom
     
-def f_th_tth(Ei,Q_rlu,recip): # this function isn't being used
-    lQ = len(Q_rlu)
-    ki = f_ki(Ei)
-    print('Max |Q| = %.2f (inv ang) = %.2f[H,0,0] (r.l.u.)' % (2*ki, 2*ki/recip[0]))
-    Q_ang = Q_rlu*2*np.pi*recip
-    Q_norm = np.zeros(lQ)
-    for i in range(lQ):
-        Q_norm[i] = np.sqrt(np.matmul(np.transpose(Q_rlu[i]),np.matmul(Gstar,Q_rlu[i])))
-    tth = np.arccos(1-Q_norm**2/(2*ki**2))
-    # uhat = u*np.diag(Gstar) # in brillouin zone space
-    th = -(np.arcsin(Q_ang[:,0]/ki/(-2)/np.sin(-tth/2))-tth/2) #potential bug here
-    return th, tth
 
-def f_C(lat_pars,u,v,Ei,tth='',th='',thstep = 10.,coinc=False,hkl='h'):
-    # There are three ways to use this function: 
+
+def f_C(lat_pars,u,v,Ei,tth='',th='',Q_rlu='',thstep = 10.,coinc=False,hkl='h'):
+    # There are four ways to use this function: 
         # 1) leave kwd_args (tth,th,coinc) default: tth and th are chosen equal to the available ranges for SIX
         # 2) input user defined tth and th values. These need to be "long" meaning they need to repeat values to fill up the corresponding 2D tth/th phase-space. The coinc and hkl kwd_args are not used.
         # 3) if coinc = True, there needs to be user defined tth and th, and they should be "short" meaning they should only show unique values. The result: for each user defined tth value, th values are calculated to provide constant cuts along the chosen hkl axis
+        # 4) Input desired Q values and calculate th, tth
+    Gstar,recip,vol = f_Gstar(lat_pars)
+    print(recip)
+    print(lat_pars)
     C = xr.Dataset()
-    if (len(tth)==0):
+    if len(Q_rlu)!=0:
+        th,tth = f_th_tth(Ei,Q_rlu,Gstar,recip)
+    elif (len(tth)==0)&(len(Q_rlu)==0):
         tth,th = f_full_tthth(step=thstep)
     elif coinc:
         tth_short = tth; th_short = th;
@@ -104,8 +99,7 @@ def f_C(lat_pars,u,v,Ei,tth='',th='',thstep = 10.,coinc=False,hkl='h'):
     # th = np.repeat([th],ltth,axis=0).flatten()    
     # tth = np.repeat(tth,lth)
     C = C.assign_coords(index = np.arange(lth))
-    Gstar,recip,vol = f_Gstar(lat_pars)
-    C = C.assign({'Gstar': (('anginv','anginv'),Gstar),
+    C = C.assign({'Gstar': (('anginv','anginv2'),Gstar),
                   'recip':  ('anginv',recip),
                   'vol':    ('Ei',[vol]),
                   'Ei':     ('Ei',[Ei])})
@@ -136,16 +130,16 @@ def f_C(lat_pars,u,v,Ei,tth='',th='',thstep = 10.,coinc=False,hkl='h'):
 def printeverythingdf(df):
     with pd.option_context('display.max_rows', None, 'display.max_columns', None, 'display.width', 1000):
         print(df)
-def f_th_tth(Ei,Q_rlu,recip):
+
+def f_th_tth(Ei,Q_rlu,Gstar,recip): # this function isn't being used
     lQ = len(Q_rlu)
     ki = f_ki(Ei)
     print('Max |Q| = %.2f (inv ang) = %.2f[H,0,0] (r.l.u.)' % (2*ki, 2*ki/recip[0]))
-    Q_ang = Q_rlu*2*np.pi*recip
+    Q_ang = Q_rlu*recip
     Q_norm = np.zeros(lQ)
     for i in range(lQ):
         Q_norm[i] = np.sqrt(np.matmul(np.transpose(Q_rlu[i]),np.matmul(Gstar,Q_rlu[i])))
-    
-    tth = np.arccos(1-Q_norm**2/(2*ki**2))
+    tth = arccosd(1-Q_norm**2/(2*ki**2))
     # uhat = u*np.diag(Gstar) # in brillouin zone space
     th = -(arcsind(Q_ang[:,0]/ki/(-2)/sind(-tth/2))-tth/2) #potential bug here
     return th, tth
